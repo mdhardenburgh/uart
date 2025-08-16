@@ -1,0 +1,64 @@
+# .github/workflows/main.yml
+name: Verilator CI
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+# Cancel previous runs of the same PR to save CI minutes
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Install Verilator toolchain
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            verilator cmake make g++ git \
+            libfl-dev libelf-dev
+
+      - name: Configure (CMake)
+        run: cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
+
+      - name: Build transmitterTb
+        run: cmake --build build --target transmitterTb -- -j$(nproc)
+
+      - name: Build recieverTb
+        run: cmake --build build --target recieverTb -- -j$(nproc)
+
+      - name: Run transmitterTb
+        run: |
+          # Try the expected location first, then fall back to a search.
+          if [ -x build/testing/uart/transmitterTb ]; then
+            ./build/testing/uart/transmitterTb
+          else
+            exe=$(find build -type f -executable -name transmitterTb | head -n1)
+            if [ -z "$exe" ]; then
+              echo "transmitterTb executable not found" >&2
+              exit 1
+            fi
+            "$exe"
+          fi
+
+      - name: Run recieverTb
+        run: |
+          if [ -x build/testing/uart/recieverTb ]; then
+            ./build/testing/uart/recieverTb
+          else
+            exe=$(find build -type f -executable -name recieverTb | head -n1)
+            if [ -z "$exe" ]; then
+              echo "recieverTb executable not found" >&2
+              exit 1
+            fi
+            "$exe"
+          fi
