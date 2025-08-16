@@ -1,12 +1,12 @@
 `include "uartUtil.sv"
 module transmitter
 (
-    input logic clk, // from chip
-    input logic rst, // from chip
-    input logic send, // from chip
-    input logic[7:0] byteToLoad, // from chip
+    input logic clk, // from baud rate generator
+    input logic rst, // from system
+    input logic send, // from buffer
+    input logic[7:0] byteToLoad, // from buffer
     output logic transmitOutput, // to FTDI uart
-    output logic done // to chip
+    output logic done // to buffer, ready for next byte
 );
 
     uartUtil::states_t stateCounter;
