@@ -2,8 +2,6 @@ name: CI (Verilator)
 
 on:
   pull_request:
-    # By default this fires on: opened, synchronize (new commits), reopened
-    # which matches "PR is created" and "new push occurs to that PR branch".
     types: [opened, synchronize, reopened, ready_for_review]
     branches: ["**"]
   workflow_dispatch:
@@ -19,50 +17,99 @@ jobs:
   build-and-test:
     runs-on: ubuntu-latest
 
-    # Run the whole job inside your Docker Hub image
     container:
       image: docker.io/mhardenb/verilator:stable
 
-    #defaults:
-    #  run:
-    #    shell: bash -eo pipefail
+    # Force bash for all `run:` steps (important in containers and when using `act`)
+    defaults:
+      run:
+        shell: bash
+
+    env:
+      CI_LOG: ${{ github.workspace }}/ci.log
 
     steps:
       - name: Check out repo
-      # If svTest or anything is fetched via CMake/FetchContent, we still need only the main repo here
         uses: actions/checkout@v4
+
+      - name: Ensure Node.js is available
+        run: |
+          set -euo pipefail
+          apt-get update
+          apt-get install -y --no-install-recommends nodejs
+          node -v
+
+      - name: Init combined log
+        run: |
+          set -euo pipefail
+          : > "$CI_LOG"
+          echo "Created $CI_LOG"
 
       - name: Show tool versions
         run: |
-          which verilator || true
-          verilator --version || true
-          cmake --version || true
-          g++ --version || true
-          git --version || true
+          set -euo pipefail
+          {
+            which verilator || true
+            verilator --version || true
+            cmake --version || true
+            g++ --version || true
+            git --version || true
+          } 2>&1 | tee -a "$CI_LOG"
 
       - name: Configure (CMake)
-        run: cmake -S . -B build
+        run: |
+          set -euo pipefail
+          cmake -S . -B build 2>&1 | tee -a "$CI_LOG"
 
       - name: Build transmitterTb
-        run: cmake --build build --target transmitterTb -- -j$(nproc)
+        run: |
+          set -euo pipefail
+          cmake --build build --target transmitterTb -- -j"$(nproc)" 2>&1 | tee -a "$CI_LOG"
 
       - name: Build recieverTb
-        run: cmake --build build --target recieverTb -- -j$(nproc)
+        run: |
+          set -euo pipefail
+          cmake --build build --target recieverTb -- -j"$(nproc)" 2>&1 | tee -a "$CI_LOG"
 
       - name: Run transmitterTb
         run: |
+          set -euo pipefail
           BIN="$(find build -type f -name transmitterTb -perm -111 | head -n1)"
-          if [[ -z "$BIN" ]]; then
-            echo "::error::Could not locate transmitterTb executable in build tree"; exit 1
+          if [ -z "${BIN:-}" ]; then
+            echo "::error::Could not locate transmitterTb executable in build tree" | tee -a "$CI_LOG"
+            exit 1
           fi
-          echo "Running $BIN"
-          "$BIN"
+          echo "Running $BIN" | tee -a "$CI_LOG"
+          "$BIN" 2>&1 | tee -a "$CI_LOG"
 
       - name: Run recieverTb
         run: |
+          set -euo pipefail
           BIN="$(find build -type f -name recieverTb -perm -111 | head -n1)"
-          if [[ -z "$BIN" ]]; then
-            echo "::error::Could not locate recieverTb executable in build tree"; exit 1
+          if [ -z "${BIN:-}" ]; then
+            echo "::error::Could not locate recieverTb executable in build tree" | tee -a "$CI_LOG"
+            exit 1
           fi
-          echo "Running $BIN"
-          "$BIN"
+          echo "Running $BIN" | tee -a "$CI_LOG"
+          "$BIN" 2>&1 | tee -a "$CI_LOG"
+
+      - name: Scan combined log for 'FAIL'
+        if: ${{ always() }}
+        run: |
+          set -euo pipefail
+          echo "Scanning $CI_LOG for the word 'FAIL' (case-insensitive, whole word)…"
+          if grep -n -i -w FAIL "$CI_LOG"; then
+            echo "::error::Found 'FAIL' in the combined log above"
+            exit 1
+          else
+            echo "No 'FAIL' tokens found in $CI_LOG"
+          fi
+
+      - name: Upload combined log
+        if: ${{ always() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: ci-log
+          path: ${{ env.CI_LOG }}
+          if-no-files-found: warn
+          retention-days: 7
