@@ -1,34 +1,47 @@
-# .github/workflows/main.yml
-name: Verilator CI
+name: CI (Verilator)
 
 on:
   pull_request:
-    types: [opened, synchronize, reopened]
+    # By default this fires on: opened, synchronize (new commits), reopened
+    # which matches "PR is created" and "new push occurs to that PR branch".
+    types: [opened, synchronize, reopened, ready_for_review]
+    branches: ["**"]
+  workflow_dispatch:
 
-# Cancel previous runs of the same PR to save CI minutes
+permissions:
+  contents: read
+
 concurrency:
-  group: ${{ github.workflow }}-${{ github.event.pull_request.number }}
+  group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
   build-and-test:
     runs-on: ubuntu-latest
 
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
+    # Run the whole job inside your Docker Hub image
+    container:
+      image: docker.io/mhardenb/verilator:stable
 
-      - name: Install Verilator toolchain
+    #defaults:
+    #  run:
+    #    shell: bash -eo pipefail
+
+    steps:
+      - name: Check out repo
+      # If svTest or anything is fetched via CMake/FetchContent, we still need only the main repo here
+        uses: actions/checkout@v4
+
+      - name: Show tool versions
         run: |
-          sudo apt-get update
-          sudo apt-get install -y \
-            verilator cmake make g++ git \
-            libfl-dev libelf-dev
+          which verilator || true
+          verilator --version || true
+          cmake --version || true
+          g++ --version || true
+          git --version || true
 
       - name: Configure (CMake)
-        run: cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
+        run: cmake -S . -B build
 
       - name: Build transmitterTb
         run: cmake --build build --target transmitterTb -- -j$(nproc)
@@ -38,27 +51,18 @@ jobs:
 
       - name: Run transmitterTb
         run: |
-          # Try the expected location first, then fall back to a search.
-          if [ -x build/testing/uart/transmitterTb ]; then
-            ./build/testing/uart/transmitterTb
-          else
-            exe=$(find build -type f -executable -name transmitterTb | head -n1)
-            if [ -z "$exe" ]; then
-              echo "transmitterTb executable not found" >&2
-              exit 1
-            fi
-            "$exe"
+          BIN="$(find build -type f -name transmitterTb -perm -111 | head -n1)"
+          if [[ -z "$BIN" ]]; then
+            echo "::error::Could not locate transmitterTb executable in build tree"; exit 1
           fi
+          echo "Running $BIN"
+          "$BIN"
 
       - name: Run recieverTb
         run: |
-          if [ -x build/testing/uart/recieverTb ]; then
-            ./build/testing/uart/recieverTb
-          else
-            exe=$(find build -type f -executable -name recieverTb | head -n1)
-            if [ -z "$exe" ]; then
-              echo "recieverTb executable not found" >&2
-              exit 1
-            fi
-            "$exe"
+          BIN="$(find build -type f -name recieverTb -perm -111 | head -n1)"
+          if [[ -z "$BIN" ]]; then
+            echo "::error::Could not locate recieverTb executable in build tree"; exit 1
           fi
+          echo "Running $BIN"
+          "$BIN"
