@@ -20,7 +20,7 @@ module reciever
     begin : incrementState
         if(rst)
         begin
-            stateCounter <= uartUtil::IDLE;
+            stateCounter <= uartUtil::SEND;
         end
         else
         begin
