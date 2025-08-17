@@ -13,7 +13,7 @@ module reciever
     logic[2:0] recieveCounter;
     logic[7:0] recievedInput;
 
-    assign recievedInput = ({recieverInput, 7'b0}|(byteRecieved>>1));
+    // assign recievedInput = ({recieverInput, 7'b0}|(byteRecieved>>1));
 
     always_ff @(posedge clk) 
     begin : incrementState
