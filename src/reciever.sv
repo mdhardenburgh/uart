@@ -11,15 +11,16 @@ module reciever
     uartUtil::states_t nextState;
 
     logic[2:0] recieveCounter;
-    // logic[7:0] recievedInput;
+    logic[7:0] recievedInput;
 
-    // assign recievedInput = ({recieverInput, 7'b0}|(byteRecieved>>1));
+    assign recievedInput = ({recieverInput, 7'b0}|(byteRecieved>>1));
 
     always_ff @(posedge clk) 
     begin : incrementState
         if(rst)
         begin
-            stateCounter <= uartUtil::IDLE;
+            //stateCounter <= uartUtil::IDLE;
+            stateCounter <= uartUtil::SEND;
         end
         else
         begin
