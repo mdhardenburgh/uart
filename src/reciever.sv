@@ -11,7 +11,7 @@ module reciever
     uartUtil::states_t nextState;
 
     logic[2:0] recieveCounter;
-    logic[7:0] recievedInput;
+    // logic[7:0] recievedInput;
 
     // assign recievedInput = ({recieverInput, 7'b0}|(byteRecieved>>1));
 
