@@ -10,7 +10,7 @@ module reciever
     uartUtil::states_t stateCounter;
     uartUtil::states_t nextState;
 
-    logic[2:0] recieveCounter;
+    logic[3:0] recieveCounter;
     logic[7:0] recievedInput;
 
     assign recievedInput = ({recieverInput, 7'b0}|(byteRecieved>>1));
@@ -31,7 +31,7 @@ module reciever
     begin: recieveCounterLogic
         if(rst)
         begin
-            recieveCounter <= 3'b0;
+            recieveCounter <= 4'b0;
         end
         else
         begin
@@ -42,7 +42,7 @@ module reciever
                 end
                 uartUtil::IDLE, uartUtil::STOP:
                 begin
-                    recieveCounter <= 3'b0;
+                    recieveCounter <= 4'b0;
                 end
             endcase
         end
@@ -89,7 +89,7 @@ module reciever
             end
             uartUtil::SEND:
             begin
-                if((recieveCounter == 3'd7) && (recieverInput == 1'b1))
+                if((recieveCounter == 4'd8) && (recieverInput == 1'b1))
                 begin
                     nextState = uartUtil::STOP;
                 end
