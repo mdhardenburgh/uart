@@ -38,7 +38,14 @@ module reciever
             unique case(stateCounter)
                 uartUtil::START, uartUtil::SEND: 
                 begin
-                    recieveCounter <= recieveCounter + 1;
+                    if(recieveCounter < 8)
+                    begin
+                        recieveCounter <= recieveCounter + 1;
+                    end
+                    else
+                    begin
+                        recieveCounter <= recieveCounter;
+                    end
                 end
                 uartUtil::IDLE, uartUtil::STOP:
                 begin
@@ -57,9 +64,20 @@ module reciever
         else
         begin
             unique case(stateCounter)
-                uartUtil::START, uartUtil::SEND: 
+                uartUtil::START: 
                 begin
                     byteRecieved <= recievedInput;
+                end
+                uartUtil::SEND:
+                begin
+                    if((recieveCounter > 4'd7))
+                    begin
+                        byteRecieved <= byteRecieved;
+                    end
+                    else
+                    begin
+                        byteRecieved <= recievedInput;
+                    end
                 end
                 uartUtil::IDLE, uartUtil::STOP:
                 begin
@@ -89,7 +107,7 @@ module reciever
             end
             uartUtil::SEND:
             begin
-                if((recieveCounter == 4'd8) && (recieverInput == 1'b1))
+                if((recieveCounter > 4'd7) && (recieverInput == 1'b1))
                 begin
                     nextState = uartUtil::STOP;
                 end
