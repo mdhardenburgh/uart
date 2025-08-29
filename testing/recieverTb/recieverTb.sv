@@ -8,7 +8,10 @@ interface rxIf;
     logic[7:0] byteRecieved;
     logic done;
 
-    // Clocking block is a TB-side construct that tells the simulator when to sample and drive the existing interface signals relative to vIf.clk.
+    /*
+     * Clocking block is a TB-side construct that tells the simulator when to 
+     * sample and drive the existing interface signals relative to vIf.clk.
+     */
     /* verilator lint_off UNDRIVEN */
     clocking cb @(posedge clk);
         // Read DUT outputs at the edge; drive TB outputs just after the edge

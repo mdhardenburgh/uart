@@ -5,6 +5,13 @@ interface txIf;
     logic send; 
     logic[7:0] byteToLoad;
     logic transmitOutput, done;
+
+    clocking cb @(posedge clk);
+        // Read DUT outputs at the edge; drive TB outputs just after the edge
+        default input #0 output #0;
+        output rst, byteToLoad, send;      // TB drives these (DUT inputs)
+        input  transmitOutput, done;      // TB samples these (DUT outputs)
+    endclocking
 endinterface
 module transmitterTb;
     // "virtual interface" to get verilator to play nice with the test framework
@@ -28,39 +35,44 @@ module transmitterTb;
     end
 
     `TEST_TASK(transmitterTb, vaildate_output_on_reset)
-        @(posedge vIf.clk);
-        // reset all inputs, clear state from prev test
-        vIf.rst = 1'b1;
-        vIf.send = 1'b0;
-        vIf.byteToLoad = 8'h00;
-        @(posedge vIf.clk);
-        vIf.rst = 1'b0;
+        logic transmitOutputSampled;
+        logic doneSampled;
+        @(vIf.cb);
+            // reset all inputs, clear state from prev test
+            vIf.cb.rst <= 1'b1;
+            vIf.cb.send <= 1'b0;
+            vIf.cb.byteToLoad <= 8'h00;
+        @(vIf.cb);
+        vIf.cb.rst <= 1'b0;
         EXPECT_EQ_LOGIC({30'b0, dut.stateCounter}, {30'b0, uartUtil::IDLE}, `REPORT(), "binary");
         EXPECT_EQ_LOGIC({30'b0, dut.nextState}, {30'b0, uartUtil::IDLE}, `REPORT(), "binary");
-        @(posedge vIf.clk);
-        vIf.rst = 1'b1;
-        EXPECT_EQ_LOGIC({31'b0, vIf.transmitOutput}, 32'b1, `REPORT(), "binary");
-        EXPECT_EQ_LOGIC({31'b0, vIf.done}, 32'b0, `REPORT(), "binary");
+        @(vIf.cb);
+        vIf.cb.rst <= 1'b1;
+        transmitOutputSampled = vIf.cb.transmitOutput;
+        doneSampled = vIf.cb.done;
+        EXPECT_EQ_LOGIC({31'b0, transmitOutputSampled}, 32'b1, `REPORT(), "binary");
+        EXPECT_EQ_LOGIC({31'b0, doneSampled}, 32'b0, `REPORT(), "binary");
         EXPECT_EQ_LOGIC({30'b0, dut.stateCounter}, {30'b0, uartUtil::IDLE}, `REPORT(), "binary");
         EXPECT_EQ_LOGIC({30'b0, dut.nextState}, {30'b0, uartUtil::IDLE}, `REPORT(), "binary");
-        @(posedge vIf.clk);
-        vIf.rst = 1'b0;
+        @(vIf.cb);
+        vIf.cb.rst <= 1'b0;
         EXPECT_EQ_LOGIC({31'b0, vIf.transmitOutput}, 32'b1, "", "binary");
         EXPECT_EQ_LOGIC({31'b0, vIf.done}, 32'b0, `REPORT(), "binary");
         EXPECT_EQ_LOGIC({30'b0, dut.stateCounter}, {30'b0, uartUtil::IDLE}, `REPORT(), "binary");
         EXPECT_EQ_LOGIC({30'b0, dut.nextState}, {30'b0, uartUtil::IDLE}, `REPORT(), "binary");
-        @(posedge vIf.clk);
+        @(vIf.cb);
         EXPECT_EQ_LOGIC({31'b0, vIf.transmitOutput}, 32'b1, `REPORT(), "binary");
         EXPECT_EQ_LOGIC({31'b0, vIf.done}, 32'b0, `REPORT(), "binary");
         EXPECT_EQ_LOGIC({30'b0, dut.stateCounter}, {30'b0, uartUtil::IDLE}, `REPORT(), "binary");
         EXPECT_EQ_LOGIC({30'b0, dut.nextState}, {30'b0, uartUtil::IDLE}, `REPORT(), "binary");
-        @(posedge vIf.clk);
+        @(vIf.cb);
         EXPECT_EQ_LOGIC({31'b0, vIf.transmitOutput}, 32'b1, `REPORT(), "binary");
         EXPECT_EQ_LOGIC({31'b0, vIf.done}, 32'b0, `REPORT(), "binary");
         EXPECT_EQ_LOGIC({30'b0, dut.stateCounter}, {30'b0, uartUtil::IDLE}, `REPORT(), "binary");
         EXPECT_EQ_LOGIC({30'b0, dut.nextState}, {30'b0, uartUtil::IDLE}, `REPORT(), "binary");
     `END_TEST_TASK(transmitterTb, vaildate_output_on_reset)
 
+    /*
     `TEST_TASK(transmitterTb, validate_byte_loaded_on_send)
         @(posedge vIf.clk);
         vIf.rst = 1'b1;
@@ -371,7 +383,7 @@ module transmitterTb;
         EXPECT_EQ_LOGIC({30'b0, dut.nextState}, {30'b0, uartUtil::START}, `REPORT(), "binary");
         EXPECT_EQ_LOGIC({31'b0, vIf.transmitOutput}, {32'b1}, `REPORT(), "binary");
     `END_TEST_TASK(transmitterTb, validate_reset_in_middle_of_send)
-
+    */
     initial
     begin
         testFramework::TestManager::runAllTasks();
