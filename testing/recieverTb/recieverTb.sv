@@ -149,7 +149,7 @@ module recieverTb;
             EXPECT_EQ_LOGIC({28'b0, dut.recieveCounter}, 32'd0, `REPORT(), "binary");
             EXPECT_EQ_LOGIC({24'b0, vIf.cb.byteRecieved}, 32'b0, `REPORT(), "binary");
             EXPECT_EQ_LOGIC({31'b0, vIf.cb.done}, 32'b0, `REPORT(), "binary");
-        for(int iIter = 0; iIter < uartFrameSize; iIter++)
+        for(int iIter = 0; iIter < artUtil::uartFrameSize; iIter++)
         begin
             @(vIf.cb)
                 if(iIter == 0)
@@ -278,7 +278,7 @@ module recieverTb;
             EXPECT_EQ_LOGIC({28'b0, dut.recieveCounter}, 32'd0, `REPORT(), "binary");
             EXPECT_EQ_LOGIC({24'b0, vIf.cb.byteRecieved}, 32'b0, `REPORT(), "binary");
             EXPECT_EQ_LOGIC({31'b0, vIf.cb.done}, 32'b0, `REPORT(), "binary");
-        for(int iIter = 0; iIter < uartFrameSize; iIter++)
+        for(int iIter = 0; iIter < artUtil::uartFrameSize; iIter++)
         begin
             @(vIf.cb)
                 if(iIter == 0)
@@ -332,7 +332,7 @@ module recieverTb;
             EXPECT_EQ_LOGIC({28'b0, dut.recieveCounter}, 32'd0, `REPORT(), "binary");
             EXPECT_EQ_LOGIC({24'b0, vIf.cb.byteRecieved}, 32'b0, `REPORT(), "binary");
             EXPECT_EQ_LOGIC({31'b0, vIf.cb.done}, 32'b0, `REPORT(), "binary");
-        for(int iIter = 0; iIter < uartFrameSize; iIter++)
+        for(int iIter = 0; iIter < artUtil::uartFrameSize; iIter++)
         begin
             @(vIf.cb)
                 if(iIter == 0)
@@ -395,7 +395,7 @@ module recieverTb;
             EXPECT_EQ_LOGIC({31'b0, vIf.cb.done}, 32'b0, `REPORT(), "binary");
         for(int jIter = 0; jIter < numBytes; jIter++)
         begin
-            for(int iIter = 0; iIter < uartFrameSize; iIter++)
+            for(int iIter = 0; iIter < artUtil::uartFrameSize; iIter++)
             begin
                 @(vIf.cb)
                     if(iIter == 0)
@@ -466,7 +466,7 @@ module recieverTb;
             EXPECT_EQ_LOGIC({28'b0, dut.recieveCounter}, 32'd0, `REPORT(), "binary");
             EXPECT_EQ_LOGIC({24'b0, vIf.cb.byteRecieved}, 32'b0, `REPORT(), "binary");
             EXPECT_EQ_LOGIC({31'b0, vIf.cb.done}, 32'b0, `REPORT(), "binary");
-        for(int iIter = 0; iIter < uartFrameSize; iIter++)
+        for(int iIter = 0; iIter < uartUtil::uartFrameSize; iIter++)
         begin
             @(vIf.cb)
                 if(iIter == 0)

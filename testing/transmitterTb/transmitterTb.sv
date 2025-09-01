@@ -85,17 +85,29 @@ module transmitterTb;
             vIf.cb.send <= 1'b1;
             vIf.cb.byteToLoad <= byteToTransmit;
             #1
+            EXPECT_EQ_LOGIC({30'b0, dut.stateCounter}, {30'b0, uartUtil::IDLE}, `REPORT(), "binary");
             EXPECT_EQ_LOGIC({30'b0, dut.nextState}, {30'b0, uartUtil::START}, `REPORT(), "binary");
+            EXPECT_EQ_LOGIC({31'b0, vIf.cb.done}, 32'b0, `REPORT(), "binary");
+            EXPECT_EQ_LOGIC({31'b0, vIf.cb.transmitOutput}, 32'b1, `REPORT(), "binary");
         @(vIf.cb); // latches rst = 0, send = 1
             EXPECT_EQ_LOGIC({30'b0, dut.stateCounter}, {30'b0, uartUtil::START}, `REPORT(), "binary");
             EXPECT_EQ_LOGIC({30'b0, dut.nextState}, {30'b0, uartUtil::SEND}, `REPORT(), "binary");
+            EXPECT_EQ_LOGIC({31'b0, vIf.cb.done}, 32'b0, `REPORT(), "binary");
+            EXPECT_EQ_LOGIC({31'b0, vIf.cb.transmitOutput}, 32'b0, `REPORT(), "binary");
         @(vIf.cb);
             EXPECT_EQ_LOGIC({30'b0, dut.stateCounter}, {30'b0, uartUtil::SEND}, `REPORT(), "binary");
             EXPECT_EQ_LOGIC({30'b0, dut.nextState}, {30'b0, uartUtil::SEND}, `REPORT(), "binary");
+            EXPECT_EQ_LOGIC({31'b0, vIf.cb.done}, 32'b0, `REPORT(), "binary");
             EXPECT_EQ_LOGIC({31'b0, vIf.cb.transmitOutput}, 32'b1, `REPORT(), "binary");
+            EXPECT_EQ_LOGIC({29'b0, dut.sendCounter}, 32'd0, `REPORT(), "binary");
         // loadedByte doesnt latch until after the clock cycle
         @(vIf.cb);
             EXPECT_EQ_LOGIC({24'b0, dut.loadedByte}, 32'h000000FF, `REPORT(), "binary");
+            EXPECT_EQ_LOGIC({30'b0, dut.stateCounter}, {30'b0, uartUtil::SEND}, `REPORT(), "binary");
+            EXPECT_EQ_LOGIC({30'b0, dut.nextState}, {30'b0, uartUtil::SEND}, `REPORT(), "binary");
+            EXPECT_EQ_LOGIC({31'b0, vIf.cb.done}, 32'b0, `REPORT(), "binary");
+            EXPECT_EQ_LOGIC({31'b0, vIf.cb.transmitOutput}, 32'b1, `REPORT(), "binary");
+            EXPECT_EQ_LOGIC({29'b0, dut.sendCounter}, 32'd1, `REPORT(), "binary");
     `END_TEST_TASK(transmitterTb, validate_byte_loaded_on_send)
 
     `TEST_TASK(transmitterTb, validate_send_byte)
@@ -113,30 +125,47 @@ module transmitterTb;
             #1
             EXPECT_EQ_LOGIC({30'b0, dut.stateCounter}, {30'b0, uartUtil::IDLE}, `REPORT(), "binary");
             EXPECT_EQ_LOGIC({30'b0, dut.nextState}, {30'b0, uartUtil::START}, `REPORT(), "binary");
+            EXPECT_EQ_LOGIC({31'b0, vIf.cb.done}, 32'b0, `REPORT(), "binary");
+            EXPECT_EQ_LOGIC({31'b0, vIf.cb.transmitOutput}, 32'b1, `REPORT(), "binary");
+            EXPECT_EQ_LOGIC({29'b0, dut.sendCounter}, 32'd0, `REPORT(), "binary");
         @(vIf.cb);
             vIf.cb.send <= 1'b0;
             EXPECT_EQ_LOGIC({30'b0, dut.stateCounter}, {30'b0, uartUtil::START}, `REPORT(), "binary");
             EXPECT_EQ_LOGIC({30'b0, dut.nextState}, {30'b0, uartUtil::SEND}, `REPORT(), "binary");
+            EXPECT_EQ_LOGIC({31'b0, vIf.cb.done}, 32'b0, `REPORT(), "binary");
             EXPECT_EQ_LOGIC({31'b0, vIf.cb.transmitOutput}, 32'b0, `REPORT(), "binary");
-        for(int iIter = 0; iIter < 7; iIter++)
+            EXPECT_EQ_LOGIC({29'b0, dut.sendCounter}, 32'd0, `REPORT(), "binary");
+        for(int iIter = 0; iIter < uartUtil::uartFrameSize; iIter++)
         begin
-            @(vIf.cb); // send 0 to 6
-                EXPECT_EQ_LOGIC({30'b0, dut.stateCounter}, {30'b0, uartUtil::SEND}, `REPORT(), "binary");
-                EXPECT_EQ_LOGIC({30'b0, dut.nextState}, {30'b0, uartUtil::SEND}, `REPORT(), "binary");
+            @(vIf.cb);
+                if(iIter == 7)
+                begin
+                    EXPECT_EQ_LOGIC({30'b0, dut.stateCounter}, {30'b0, uartUtil::SEND}, `REPORT(), "binary");
+                    EXPECT_EQ_LOGIC({30'b0, dut.nextState}, {30'b0, uartUtil::STOP}, `REPORT(), "binary");
+                    EXPECT_EQ_LOGIC({31'b0, vIf.cb.done}, 32'b0, `REPORT(), "binary");
+                    EXPECT_EQ_LOGIC({29'b0, dut.sendCounter}, iIter, `REPORT(), "binary");
+                end
+                else
+                begin
+                    EXPECT_EQ_LOGIC({30'b0, dut.stateCounter}, {30'b0, uartUtil::SEND}, `REPORT(), "binary");
+                    EXPECT_EQ_LOGIC({30'b0, dut.nextState}, {30'b0, uartUtil::SEND}, `REPORT(), "binary");
+                end
+                EXPECT_EQ_LOGIC({31'b0, vIf.cb.done}, 32'b0, `REPORT(), "binary");
                 EXPECT_EQ_LOGIC({31'b0, vIf.cb.transmitOutput}, {31'b0, byteToTransmit[iIter]}, $sformatf("%s: %0d, iIter: %0d", `__FILE__, `__LINE__, iIter), "binary");
+                EXPECT_EQ_LOGIC({29'b0, dut.sendCounter}, iIter, `REPORT(), "binary");
         end
-        @(vIf.cb); // send 7
-            EXPECT_EQ_LOGIC({30'b0, dut.stateCounter}, {30'b0, uartUtil::SEND}, `REPORT(), "binary");
-            EXPECT_EQ_LOGIC({30'b0, dut.nextState}, {30'b0, uartUtil::STOP}, `REPORT(), "binary");
-            EXPECT_EQ_LOGIC({31'b0, vIf.cb.transmitOutput}, {31'b0, byteToTransmit[7]}, `REPORT(), "binary");
         @(vIf.cb); // stop
             EXPECT_EQ_LOGIC({30'b0, dut.stateCounter}, {30'b0, uartUtil::STOP}, `REPORT(), "binary");
             EXPECT_EQ_LOGIC({30'b0, dut.nextState}, {30'b0, uartUtil::IDLE}, `REPORT(), "binary");
+            EXPECT_EQ_LOGIC({31'b0, vIf.cb.done}, 32'b1, `REPORT(), "binary");
             EXPECT_EQ_LOGIC({31'b0, vIf.cb.transmitOutput}, {32'b1}, `REPORT(), "binary");
+            EXPECT_EQ_LOGIC({29'b0, dut.sendCounter}, 32'd0, `REPORT(), "binary");
         @(vIf.cb); // back to IDLE
             EXPECT_EQ_LOGIC({30'b0, dut.stateCounter}, {30'b0, uartUtil::IDLE}, `REPORT(), "binary");
             EXPECT_EQ_LOGIC({30'b0, dut.nextState}, {30'b0, uartUtil::IDLE}, `REPORT(), "binary");
+            EXPECT_EQ_LOGIC({31'b0, vIf.cb.done}, 32'b0, `REPORT(), "binary");
             EXPECT_EQ_LOGIC({31'b0, vIf.cb.transmitOutput}, {32'b1}, `REPORT(), "binary");
+            EXPECT_EQ_LOGIC({29'b0, dut.sendCounter}, 32'd0, `REPORT(), "binary");
     `END_TEST_TASK(transmitterTb, validate_send_byte)
 
     `TEST_TASK(transmitterTb, validate_second_start_after_first_byte)
@@ -155,38 +184,56 @@ module transmitterTb;
             EXPECT_EQ_LOGIC({30'b0, dut.stateCounter}, {30'b0, uartUtil::IDLE}, `REPORT(), "binary");
             EXPECT_EQ_LOGIC({30'b0, dut.nextState}, {30'b0, uartUtil::START}, `REPORT(), "binary");
             EXPECT_EQ_LOGIC({31'b0, vIf.cb.transmitOutput}, 32'b1, `REPORT(), "binary");
+            EXPECT_EQ_LOGIC({31'b0, vIf.cb.done}, 32'b0, `REPORT(), "binary");
+            EXPECT_EQ_LOGIC({29'b0, dut.sendCounter}, 32'd0, `REPORT(), "binary");
         @(vIf.cb);
             EXPECT_EQ_LOGIC({30'b0, dut.stateCounter}, {30'b0, uartUtil::START}, `REPORT(), "binary");
             EXPECT_EQ_LOGIC({30'b0, dut.nextState}, {30'b0, uartUtil::SEND},`REPORT(), "binary");
             EXPECT_EQ_LOGIC({31'b0, vIf.cb.transmitOutput}, 32'b0, `REPORT(), "binary");
-        for(int iIter = 0; iIter < 7; iIter++)
+            EXPECT_EQ_LOGIC({31'b0, vIf.cb.done}, 32'b0, `REPORT(), "binary");
+            EXPECT_EQ_LOGIC({29'b0, dut.sendCounter}, 32'd0, `REPORT(), "binary");
+        for(int iIter = 0; iIter < uartUtil::uartFrameSize; iIter++)
         begin
-            @(vIf.cb); // send 0 to 6
-                EXPECT_EQ_LOGIC({30'b0, dut.stateCounter}, {30'b0, uartUtil::SEND}, `REPORT(), "binary");
-                EXPECT_EQ_LOGIC({30'b0, dut.nextState}, {30'b0, uartUtil::SEND}, `REPORT(), "binary");
+            @(vIf.cb);
+                if(iIter == 7)
+                begin
+                    byteToTransmit = 8'b11100101;
+                    vIf.cb.byteToLoad <= byteToTransmit;
+                    vIf.cb.send <= 1'b1;
+                    EXPECT_EQ_LOGIC({30'b0, dut.stateCounter}, {30'b0, uartUtil::SEND}, `REPORT(), "binary");
+                    EXPECT_EQ_LOGIC({30'b0, dut.nextState}, {30'b0, uartUtil::STOP}, `REPORT(), "binary");
+                    EXPECT_EQ_LOGIC({31'b0, vIf.cb.done}, 32'b0, `REPORT(), "binary");
+                    EXPECT_EQ_LOGIC({29'b0, dut.sendCounter}, iIter, `REPORT(), "binary");
+                end
+                else
+                begin
+                    EXPECT_EQ_LOGIC({30'b0, dut.stateCounter}, {30'b0, uartUtil::SEND}, `REPORT(), "binary");
+                    EXPECT_EQ_LOGIC({30'b0, dut.nextState}, {30'b0, uartUtil::SEND}, `REPORT(), "binary");
+                end
+                EXPECT_EQ_LOGIC({31'b0, vIf.cb.done}, 32'b0, `REPORT(), "binary");
                 EXPECT_EQ_LOGIC({31'b0, vIf.cb.transmitOutput}, {31'b0, byteToTransmit[iIter]}, $sformatf("%s: %0d, iIter: %0d", `__FILE__, `__LINE__, iIter), "binary");
+                EXPECT_EQ_LOGIC({29'b0, dut.sendCounter}, iIter, `REPORT(), "binary");
         end
-        @(vIf.cb); // send 7
-            byteToTransmit = 8'b11100101;
-            vIf.cb.byteToLoad <= byteToTransmit;
-            vIf.cb.send <= 1'b1;
-            EXPECT_EQ_LOGIC({30'b0, dut.stateCounter}, {30'b0, uartUtil::SEND}, `REPORT(), "binary");
-            EXPECT_EQ_LOGIC({30'b0, dut.nextState}, {30'b0, uartUtil::STOP}, `REPORT(), "binary");
-            EXPECT_EQ_LOGIC({31'b0, vIf.cb.transmitOutput}, {31'b0, vIf.byteToLoad[7]}, `REPORT(), "binary");
         @(vIf.cb); // stop
             EXPECT_EQ_LOGIC({30'b0, dut.stateCounter}, {30'b0, uartUtil::STOP}, `REPORT(), "binary");
             EXPECT_EQ_LOGIC({30'b0, dut.nextState}, {30'b0, uartUtil::START}, `REPORT(), "binary");
             EXPECT_EQ_LOGIC({31'b0, vIf.cb.transmitOutput}, {32'b1}, `REPORT(), "binary");
+            EXPECT_EQ_LOGIC({31'b0, vIf.cb.done}, 32'b1, `REPORT(), "binary");
+            EXPECT_EQ_LOGIC({29'b0, dut.sendCounter}, 32'd0, `REPORT(), "binary");
         @(vIf.cb); // back to START
             EXPECT_EQ_LOGIC({30'b0, dut.stateCounter}, {30'b0, uartUtil::START}, `REPORT(), "binary");
             EXPECT_EQ_LOGIC({30'b0, dut.nextState}, {30'b0, uartUtil::SEND}, `REPORT(), "binary");
             EXPECT_EQ_LOGIC({31'b0, vIf.cb.transmitOutput}, {32'b0}, `REPORT(), "binary");
             EXPECT_EQ_LOGIC({29'b0, dut.sendCounter}, {32'b0}, `REPORT(), "binary");
+            EXPECT_EQ_LOGIC({31'b0, vIf.cb.done}, 32'b0, `REPORT(), "binary");
+            EXPECT_EQ_LOGIC({29'b0, dut.sendCounter}, 32'd0, `REPORT(), "binary");
         @(vIf.cb); // back to SEND
             EXPECT_EQ_LOGIC({30'b0, dut.stateCounter}, {30'b0, uartUtil::SEND}, `REPORT(), "binary");
             EXPECT_EQ_LOGIC({30'b0, dut.nextState}, {30'b0, uartUtil::SEND}, `REPORT(), "binary");
             EXPECT_EQ_LOGIC({31'b0, vIf.cb.transmitOutput}, {31'b0, byteToTransmit[0]}, `REPORT(), "binary");
             EXPECT_EQ_LOGIC({29'b0, dut.sendCounter}, {32'b0}, `REPORT(), "binary");
+            EXPECT_EQ_LOGIC({31'b0, vIf.cb.done}, 32'b0, `REPORT(), "binary");
+            EXPECT_EQ_LOGIC({29'b0, dut.sendCounter}, 32'd0, `REPORT(), "binary");
     `END_TEST_TASK(transmitterTb, validate_second_start_after_first_byte)
 
     `TEST_TASK(transmitterTb, validate_send_double)
@@ -205,54 +252,72 @@ module transmitterTb;
             EXPECT_EQ_LOGIC({30'b0, dut.stateCounter}, {30'b0, uartUtil::IDLE}, `REPORT(), "binary");
             EXPECT_EQ_LOGIC({30'b0, dut.nextState}, {30'b0, uartUtil::START}, `REPORT(), "binary");
             EXPECT_EQ_LOGIC({31'b0, vIf.cb.transmitOutput}, 32'b1, `REPORT(), "binary");
+            EXPECT_EQ_LOGIC({31'b0, vIf.cb.done}, 32'b0, `REPORT(), "binary");
+            EXPECT_EQ_LOGIC({29'b0, dut.sendCounter}, 32'd0, `REPORT(), "binary");
         @(vIf.cb);
             EXPECT_EQ_LOGIC({30'b0, dut.stateCounter}, {30'b0, uartUtil::START}, `REPORT(), "binary");
             EXPECT_EQ_LOGIC({30'b0, dut.nextState}, {30'b0, uartUtil::SEND},`REPORT(), "binary");
             EXPECT_EQ_LOGIC({31'b0, vIf.cb.transmitOutput}, 32'b0, `REPORT(), "binary");
-        for(int iIter = 0; iIter < 7; iIter++)
+            EXPECT_EQ_LOGIC({31'b0, vIf.cb.done}, 32'b0, `REPORT(), "binary");
+            EXPECT_EQ_LOGIC({29'b0, dut.sendCounter}, 32'd0, `REPORT(), "binary");
+        for(int jIter = 0; jIter < 2; jIter++)
         begin
-            @(vIf.cb); // send 0 to 6
-                EXPECT_EQ_LOGIC({30'b0, dut.stateCounter}, {30'b0, uartUtil::SEND}, `REPORT(), "binary");
-                EXPECT_EQ_LOGIC({30'b0, dut.nextState}, {30'b0, uartUtil::SEND}, `REPORT(), "binary");
-                EXPECT_EQ_LOGIC({31'b0, vIf.cb.transmitOutput}, {31'b0, byteToTransmit[iIter]}, $sformatf("%s: %0d, iIter: %0d", `__FILE__, `__LINE__, iIter), "binary");
+            for(int iIter = 0; iIter < uartUtil::uartFrameSize; iIter++)
+            begin
+                @(vIf.cb); // send 0 to 6
+                    if(iIter == 7)
+                    begin
+                        if(jIter == 1)
+                        begin
+                            byteToTransmit = 8'b11100101;
+                        end
+                        vIf.cb.byteToLoad <= byteToTransmit;
+                        vIf.cb.send <= 1'b1;
+                        EXPECT_EQ_LOGIC({30'b0, dut.stateCounter}, {30'b0, uartUtil::SEND}, `REPORT(), "binary");
+                        EXPECT_EQ_LOGIC({30'b0, dut.nextState}, {30'b0, uartUtil::STOP}, `REPORT(), "binary");
+                        EXPECT_EQ_LOGIC({31'b0, vIf.cb.done}, 32'b0, `REPORT(), "binary");
+                        EXPECT_EQ_LOGIC({29'b0, dut.sendCounter}, iIter, `REPORT(), "binary");
+                    end
+                    else
+                    begin
+                        EXPECT_EQ_LOGIC({30'b0, dut.stateCounter}, {30'b0, uartUtil::SEND}, `REPORT(), "binary");
+                        EXPECT_EQ_LOGIC({30'b0, dut.nextState}, {30'b0, uartUtil::SEND}, `REPORT(), "binary");
+                    end
+                    EXPECT_EQ_LOGIC({31'b0, vIf.cb.done}, 32'b0, `REPORT(), "binary");
+                    EXPECT_EQ_LOGIC({31'b0, vIf.cb.transmitOutput}, {31'b0, byteToTransmit[iIter]}, $sformatf("%s: %0d, iIter: %0d", `__FILE__, `__LINE__, iIter), "binary");
+                    EXPECT_EQ_LOGIC({29'b0, dut.sendCounter}, iIter, `REPORT(), "binary");
+            end
+            @(vIf.cb); // stop
+                EXPECT_EQ_LOGIC({30'b0, dut.stateCounter}, {30'b0, uartUtil::STOP}, `REPORT(), "binary");
+                if(jIter == 1)
+                begin
+                    vIf.cb.send <= 1'b0;
+                    #1
+                    EXPECT_EQ_LOGIC({30'b0, dut.nextState}, {30'b0, uartUtil::IDLE}, `REPORT(), "binary");
+                end
+                else
+                begin
+                    EXPECT_EQ_LOGIC({30'b0, dut.nextState}, {30'b0, uartUtil::START}, `REPORT(), "binary");
+                end
+                EXPECT_EQ_LOGIC({31'b0, vIf.cb.transmitOutput}, {32'b1}, `REPORT(), "binary");
+                EXPECT_EQ_LOGIC({31'b0, vIf.cb.done}, 32'b1, `REPORT(), "binary");
+                EXPECT_EQ_LOGIC({29'b0, dut.sendCounter}, 32'd0, `REPORT(), "binary");
+            if(jIter < 1)
+            begin
+                @(vIf.cb);
+                    EXPECT_EQ_LOGIC({30'b0, dut.stateCounter}, {30'b0, uartUtil::START}, `REPORT(), "binary");
+                    EXPECT_EQ_LOGIC({30'b0, dut.nextState}, {30'b0, uartUtil::SEND},`REPORT(), "binary");
+                    EXPECT_EQ_LOGIC({31'b0, vIf.cb.transmitOutput}, 32'b0, `REPORT(), "binary");
+                    EXPECT_EQ_LOGIC({31'b0, vIf.cb.done}, 32'b0, `REPORT(), "binary");
+                    EXPECT_EQ_LOGIC({29'b0, dut.sendCounter}, 32'd0, `REPORT(), "binary");
+            end
         end
-        @(vIf.cb); // send 7
-            byteToTransmit = 8'b11100101;
-            vIf.cb.byteToLoad <= byteToTransmit;
-            vIf.cb.send <= 1'b1;
-            EXPECT_EQ_LOGIC({30'b0, dut.stateCounter}, {30'b0, uartUtil::SEND}, `REPORT(), "binary");
-            EXPECT_EQ_LOGIC({30'b0, dut.nextState}, {30'b0, uartUtil::STOP}, `REPORT(), "binary");
-            EXPECT_EQ_LOGIC({31'b0, vIf.cb.transmitOutput}, {31'b0, byteToTransmit[7]}, `REPORT(), "binary");
-        @(vIf.cb); // stop
-            EXPECT_EQ_LOGIC({30'b0, dut.stateCounter}, {30'b0, uartUtil::STOP}, `REPORT(), "binary");
-            EXPECT_EQ_LOGIC({30'b0, dut.nextState}, {30'b0, uartUtil::START}, `REPORT(), "binary");
-            EXPECT_EQ_LOGIC({31'b0, vIf.cb.transmitOutput}, {32'b1}, `REPORT(), "binary");
-        @(vIf.cb); // back to START
-            EXPECT_EQ_LOGIC({30'b0, dut.stateCounter}, {30'b0, uartUtil::START}, `REPORT(), "binary");
-            EXPECT_EQ_LOGIC({30'b0, dut.nextState}, {30'b0, uartUtil::SEND}, `REPORT(), "binary");
-            EXPECT_EQ_LOGIC({31'b0, vIf.cb.transmitOutput}, {32'b0}, `REPORT(), "binary");
-            EXPECT_EQ_LOGIC({29'b0, dut.sendCounter}, {32'b0}, `REPORT(), "binary");
-        for(int iIter = 0; iIter < 7; iIter++)
-        begin
-            @(vIf.cb); // send 0 to 6
-                EXPECT_EQ_LOGIC({29'b0, dut.sendCounter}, iIter, `REPORT(), "binary");
-                EXPECT_EQ_LOGIC({30'b0, dut.stateCounter}, {30'b0, uartUtil::SEND}, `REPORT(), "binary");
-                EXPECT_EQ_LOGIC({30'b0, dut.nextState}, {30'b0, uartUtil::SEND}, `REPORT(), "binary");
-                EXPECT_EQ_LOGIC({31'b0, vIf.cb.transmitOutput}, {31'b0, byteToTransmit[iIter]}, $sformatf("%s: %0d, iIter: %0d", `__FILE__, `__LINE__, iIter), "binary");
-        end
-        @(vIf.cb); // send 7
-            vIf.cb.send <= 1'b0;
-            EXPECT_EQ_LOGIC({30'b0, dut.stateCounter}, {30'b0, uartUtil::SEND}, `REPORT(), "binary");
-            EXPECT_EQ_LOGIC({30'b0, dut.nextState}, {30'b0, uartUtil::STOP}, `REPORT(), "binary");
-            EXPECT_EQ_LOGIC({31'b0, vIf.cb.transmitOutput}, {31'b0, byteToTransmit[7]}, `REPORT(), "binary");
-        @(vIf.cb); // stop
-            EXPECT_EQ_LOGIC({30'b0, dut.stateCounter}, {30'b0, uartUtil::STOP}, `REPORT(), "binary");
-            EXPECT_EQ_LOGIC({30'b0, dut.nextState}, {30'b0, uartUtil::IDLE}, `REPORT(), "binary");
-            EXPECT_EQ_LOGIC({31'b0, vIf.cb.transmitOutput}, {32'b1}, `REPORT(), "binary");
         @(vIf.cb); // back to IDLE
             EXPECT_EQ_LOGIC({30'b0, dut.stateCounter}, {30'b0, uartUtil::IDLE}, `REPORT(), "binary");
             EXPECT_EQ_LOGIC({30'b0, dut.nextState}, {30'b0, uartUtil::IDLE}, `REPORT(), "binary");
             EXPECT_EQ_LOGIC({31'b0, vIf.cb.transmitOutput}, {32'b1}, `REPORT(), "binary");
+            EXPECT_EQ_LOGIC({31'b0, vIf.cb.done}, 32'b0, `REPORT(), "binary");
+            EXPECT_EQ_LOGIC({29'b0, dut.sendCounter}, 32'd0, `REPORT(), "binary");
     `END_TEST_TASK(transmitterTb, validate_send_double)
 
     `TEST_TASK(transmitterTb, validate_reset_on_start_state)
@@ -271,15 +336,21 @@ module transmitterTb;
             EXPECT_EQ_LOGIC({30'b0, dut.stateCounter}, {30'b0, uartUtil::IDLE}, `REPORT(), "binary");
             EXPECT_EQ_LOGIC({30'b0, dut.nextState}, {30'b0, uartUtil::START}, `REPORT(), "binary");
             EXPECT_EQ_LOGIC({31'b0, vIf.cb.transmitOutput}, 32'b1, `REPORT(), "binary");
+            EXPECT_EQ_LOGIC({31'b0, vIf.cb.done}, 32'b0, `REPORT(), "binary");
+            EXPECT_EQ_LOGIC({29'b0, dut.sendCounter}, 32'd0, `REPORT(), "binary");
         @(vIf.cb);
             vIf.cb.rst <= 1'b1;
             EXPECT_EQ_LOGIC({30'b0, dut.stateCounter}, {30'b0, uartUtil::START}, `REPORT(), "binary");
             EXPECT_EQ_LOGIC({30'b0, dut.nextState}, {30'b0, uartUtil::SEND}, `REPORT(), "binary");
             EXPECT_EQ_LOGIC({31'b0, vIf.cb.transmitOutput}, 32'b0, `REPORT(), "binary");
+            EXPECT_EQ_LOGIC({31'b0, vIf.cb.done}, 32'b0, `REPORT(), "binary");
+            EXPECT_EQ_LOGIC({29'b0, dut.sendCounter}, 32'd0, `REPORT(), "binary");
         @(vIf.cb);
             EXPECT_EQ_LOGIC({30'b0, dut.stateCounter}, {30'b0, uartUtil::IDLE}, `REPORT(), "binary");
             EXPECT_EQ_LOGIC({30'b0, dut.nextState}, {30'b0, uartUtil::START}, `REPORT(), "binary");
             EXPECT_EQ_LOGIC({31'b0, vIf.cb.transmitOutput}, 32'b1, `REPORT(), "binary");
+            EXPECT_EQ_LOGIC({31'b0, vIf.cb.done}, 32'b0, `REPORT(), "binary");
+            EXPECT_EQ_LOGIC({29'b0, dut.sendCounter}, 32'd0, `REPORT(), "binary");
     `END_TEST_TASK(transmitterTb, validate_reset_on_start_state)
 
     `TEST_TASK(transmitterTb, validate_reset_on_send_state)
@@ -298,19 +369,27 @@ module transmitterTb;
             EXPECT_EQ_LOGIC({30'b0, dut.stateCounter}, {30'b0, uartUtil::IDLE}, `REPORT(), "binary");
             EXPECT_EQ_LOGIC({30'b0, dut.nextState}, {30'b0, uartUtil::START}, `REPORT(), "binary");
             EXPECT_EQ_LOGIC({31'b0, vIf.transmitOutput}, 32'b1, `REPORT(), "binary");
+            EXPECT_EQ_LOGIC({31'b0, vIf.cb.done}, 32'b0, `REPORT(), "binary");
+            EXPECT_EQ_LOGIC({29'b0, dut.sendCounter}, 32'd0, `REPORT(), "binary");
         @(vIf.cb);
             EXPECT_EQ_LOGIC({30'b0, dut.stateCounter}, {30'b0, uartUtil::START}, `REPORT(), "binary");
             EXPECT_EQ_LOGIC({30'b0, dut.nextState}, {30'b0, uartUtil::SEND}, `REPORT(), "binary");
             EXPECT_EQ_LOGIC({31'b0, vIf.transmitOutput}, 32'b0, `REPORT(), "binary");
+            EXPECT_EQ_LOGIC({31'b0, vIf.cb.done}, 32'b0, `REPORT(), "binary");
+            EXPECT_EQ_LOGIC({29'b0, dut.sendCounter}, 32'd0, `REPORT(), "binary");
         @(vIf.cb);
             vIf.cb.rst <= 1'b1;
             EXPECT_EQ_LOGIC({30'b0, dut.stateCounter}, {30'b0, uartUtil::SEND}, `REPORT(), "binary");
             EXPECT_EQ_LOGIC({30'b0, dut.nextState}, {30'b0, uartUtil::SEND}, `REPORT(), "binary");
             EXPECT_EQ_LOGIC({31'b0, vIf.transmitOutput}, {31'b0, byteToTransmit[0]}, `REPORT(), "binary");
+            EXPECT_EQ_LOGIC({31'b0, vIf.cb.done}, 32'b0, `REPORT(), "binary");
+            EXPECT_EQ_LOGIC({29'b0, dut.sendCounter}, 32'd0, `REPORT(), "binary");
         @(vIf.cb);
             EXPECT_EQ_LOGIC({30'b0, dut.stateCounter}, {30'b0, uartUtil::IDLE}, `REPORT(), "binary");
             EXPECT_EQ_LOGIC({30'b0, dut.nextState}, {30'b0, uartUtil::START}, `REPORT(), "binary");
             EXPECT_EQ_LOGIC({31'b0, vIf.transmitOutput}, 32'b1, `REPORT(), "binary");
+            EXPECT_EQ_LOGIC({31'b0, vIf.cb.done}, 32'b0, `REPORT(), "binary");
+            EXPECT_EQ_LOGIC({29'b0, dut.sendCounter}, 32'd0, `REPORT(), "binary");
     `END_TEST_TASK(transmitterTb, validate_reset_on_send_state)
 
     `TEST_TASK(transmitterTb, validate_reset_on_last_send_state)
@@ -328,26 +407,41 @@ module transmitterTb;
             #1
             EXPECT_EQ_LOGIC({30'b0, dut.stateCounter}, {30'b0, uartUtil::IDLE}, `REPORT(), "binary");
             EXPECT_EQ_LOGIC({30'b0, dut.nextState}, {30'b0, uartUtil::START}, `REPORT(), "binary");
+            EXPECT_EQ_LOGIC({31'b0, vIf.cb.transmitOutput}, 32'b1, `REPORT(), "binary");
+            EXPECT_EQ_LOGIC({31'b0, vIf.cb.done}, 32'b0, `REPORT(), "binary");
+            EXPECT_EQ_LOGIC({29'b0, dut.sendCounter}, 32'd0, `REPORT(), "binary");
         @(vIf.cb);
             EXPECT_EQ_LOGIC({30'b0, dut.stateCounter}, {30'b0, uartUtil::START}, `REPORT(), "binary");
             EXPECT_EQ_LOGIC({30'b0, dut.nextState}, {30'b0, uartUtil::SEND}, `REPORT(), "binary");
             EXPECT_EQ_LOGIC({31'b0, vIf.cb.transmitOutput}, 32'b0, `REPORT(), "binary");
-        for(int iIter = 0; iIter < 7; iIter++)
+            EXPECT_EQ_LOGIC({31'b0, vIf.cb.done}, 32'b0, `REPORT(), "binary");
+            EXPECT_EQ_LOGIC({29'b0, dut.sendCounter}, 32'd0, `REPORT(), "binary");
+        for(int iIter = 0; iIter < uartUtil::uartFrameSize; iIter++)
         begin
-            @(vIf.cb); // send 0 to 6
-                EXPECT_EQ_LOGIC({30'b0, dut.stateCounter}, {30'b0, uartUtil::SEND}, `REPORT(), "binary");
-                EXPECT_EQ_LOGIC({30'b0, dut.nextState}, {30'b0, uartUtil::SEND}, `REPORT(), "binary");
+            @(vIf.cb);
+                 if(iIter == 7)
+                begin
+                    vIf.cb.rst <= 1'b1;
+                    EXPECT_EQ_LOGIC({30'b0, dut.stateCounter}, {30'b0, uartUtil::SEND}, `REPORT(), "binary");
+                    EXPECT_EQ_LOGIC({30'b0, dut.nextState}, {30'b0, uartUtil::STOP}, `REPORT(), "binary");
+                    EXPECT_EQ_LOGIC({31'b0, vIf.cb.done}, 32'b0, `REPORT(), "binary");
+                    EXPECT_EQ_LOGIC({29'b0, dut.sendCounter}, iIter, `REPORT(), "binary");
+                end
+                else
+                begin
+                    EXPECT_EQ_LOGIC({30'b0, dut.stateCounter}, {30'b0, uartUtil::SEND}, `REPORT(), "binary");
+                    EXPECT_EQ_LOGIC({30'b0, dut.nextState}, {30'b0, uartUtil::SEND}, `REPORT(), "binary");
+                end
+                EXPECT_EQ_LOGIC({31'b0, vIf.cb.done}, 32'b0, `REPORT(), "binary");
                 EXPECT_EQ_LOGIC({31'b0, vIf.cb.transmitOutput}, {31'b0, byteToTransmit[iIter]}, $sformatf("%s: %0d, iIter: %0d", `__FILE__, `__LINE__, iIter), "binary");
+                EXPECT_EQ_LOGIC({29'b0, dut.sendCounter}, iIter, `REPORT(), "binary");
         end
-        @(vIf.cb); // send 7
-            vIf.cb.rst <= 1'b1;
-            EXPECT_EQ_LOGIC({30'b0, dut.stateCounter}, {30'b0, uartUtil::SEND}, `REPORT(), "binary");
-            EXPECT_EQ_LOGIC({30'b0, dut.nextState}, {30'b0, uartUtil::STOP}, `REPORT(), "binary");
-            EXPECT_EQ_LOGIC({31'b0, vIf.cb.transmitOutput}, {31'b0, byteToTransmit[7]}, `REPORT(), "binary");
-        @(vIf.cb); // stop
+        @(vIf.cb);
             EXPECT_EQ_LOGIC({30'b0, dut.stateCounter}, {30'b0, uartUtil::IDLE}, `REPORT(), "binary");
             EXPECT_EQ_LOGIC({30'b0, dut.nextState}, {30'b0, uartUtil::START}, `REPORT(), "binary");
             EXPECT_EQ_LOGIC({31'b0, vIf.cb.transmitOutput}, {32'b1}, `REPORT(), "binary");
+            EXPECT_EQ_LOGIC({31'b0, vIf.cb.done}, 32'b0, `REPORT(), "binary");
+            EXPECT_EQ_LOGIC({29'b0, dut.sendCounter}, 32'd0, `REPORT(), "binary");
     `END_TEST_TASK(transmitterTb, validate_reset_on_last_send_state)
 
     `TEST_TASK(transmitterTb, validate_reset_on_stop_state)
@@ -365,30 +459,47 @@ module transmitterTb;
             #1
             EXPECT_EQ_LOGIC({30'b0, dut.stateCounter}, {30'b0, uartUtil::IDLE}, `REPORT(), "binary");
             EXPECT_EQ_LOGIC({30'b0, dut.nextState}, {30'b0, uartUtil::START}, `REPORT(), "binary");
+            EXPECT_EQ_LOGIC({31'b0, vIf.cb.transmitOutput}, 32'b1, `REPORT(), "binary");
+            EXPECT_EQ_LOGIC({31'b0, vIf.cb.done}, 32'b0, `REPORT(), "binary");
+            EXPECT_EQ_LOGIC({29'b0, dut.sendCounter}, 32'd0, `REPORT(), "binary");
         @(vIf.cb);
             EXPECT_EQ_LOGIC({30'b0, dut.stateCounter}, {30'b0, uartUtil::START}, `REPORT(), "binary");
             EXPECT_EQ_LOGIC({30'b0, dut.nextState}, {30'b0, uartUtil::SEND}, `REPORT(), "binary");
             EXPECT_EQ_LOGIC({31'b0, vIf.cb.transmitOutput}, 32'b0, `REPORT(), "binary");
-        for(int iIter = 0; iIter < 7; iIter++)
+            EXPECT_EQ_LOGIC({31'b0, vIf.cb.done}, 32'b0, `REPORT(), "binary");
+            EXPECT_EQ_LOGIC({29'b0, dut.sendCounter}, 32'd0, `REPORT(), "binary");
+        for(int iIter = 0; iIter < uartUtil::uartFrameSize; iIter++)
         begin
             @(vIf.cb); // send 0 to 6
-                EXPECT_EQ_LOGIC({30'b0, dut.stateCounter}, {30'b0, uartUtil::SEND}, `REPORT(), "binary");
-                EXPECT_EQ_LOGIC({30'b0, dut.nextState}, {30'b0, uartUtil::SEND}, `REPORT(), "binary");
+                if(iIter == 7)
+                begin
+                    EXPECT_EQ_LOGIC({30'b0, dut.stateCounter}, {30'b0, uartUtil::SEND}, `REPORT(), "binary");
+                    EXPECT_EQ_LOGIC({30'b0, dut.nextState}, {30'b0, uartUtil::STOP}, `REPORT(), "binary");
+                    EXPECT_EQ_LOGIC({31'b0, vIf.cb.done}, 32'b0, `REPORT(), "binary");
+                    EXPECT_EQ_LOGIC({29'b0, dut.sendCounter}, iIter, `REPORT(), "binary");
+                end
+                else
+                begin
+                    EXPECT_EQ_LOGIC({30'b0, dut.stateCounter}, {30'b0, uartUtil::SEND}, `REPORT(), "binary");
+                    EXPECT_EQ_LOGIC({30'b0, dut.nextState}, {30'b0, uartUtil::SEND}, `REPORT(), "binary");
+                end
+                EXPECT_EQ_LOGIC({31'b0, vIf.cb.done}, 32'b0, `REPORT(), "binary");
                 EXPECT_EQ_LOGIC({31'b0, vIf.cb.transmitOutput}, {31'b0, byteToTransmit[iIter]}, $sformatf("%s: %0d, iIter: %0d", `__FILE__, `__LINE__, iIter), "binary");
-        end
-        @(vIf.cb); // send 7
-            EXPECT_EQ_LOGIC({30'b0, dut.stateCounter}, {30'b0, uartUtil::SEND}, `REPORT(), "binary");
-            EXPECT_EQ_LOGIC({30'b0, dut.nextState}, {30'b0, uartUtil::STOP}, `REPORT(), "binary");
-            EXPECT_EQ_LOGIC({31'b0, vIf.cb.transmitOutput}, {31'b0, byteToTransmit[7]}, `REPORT(), "binary");
+                EXPECT_EQ_LOGIC({29'b0, dut.sendCounter}, iIter, `REPORT(), "binary");
+       end
         @(vIf.cb); // stop
             vIf.rst <= 1'b1;
             EXPECT_EQ_LOGIC({30'b0, dut.stateCounter}, {30'b0, uartUtil::STOP}, `REPORT(), "binary");
             EXPECT_EQ_LOGIC({30'b0, dut.nextState}, {30'b0, uartUtil::START}, `REPORT(), "binary");
             EXPECT_EQ_LOGIC({31'b0, vIf.cb.transmitOutput}, {32'b1}, `REPORT(), "binary");
+            EXPECT_EQ_LOGIC({31'b0, vIf.cb.done}, 32'b1, `REPORT(), "binary");
+            EXPECT_EQ_LOGIC({29'b0, dut.sendCounter}, 32'd0, `REPORT(), "binary");
         @(vIf.cb)
             EXPECT_EQ_LOGIC({30'b0, dut.stateCounter}, {30'b0, uartUtil::IDLE}, `REPORT(), "binary");
             EXPECT_EQ_LOGIC({30'b0, dut.nextState}, {30'b0, uartUtil::START}, `REPORT(), "binary");
             EXPECT_EQ_LOGIC({31'b0, vIf.cb.transmitOutput}, {32'b1}, `REPORT(), "binary");
+            EXPECT_EQ_LOGIC({31'b0, vIf.cb.done}, 32'b0, `REPORT(), "binary");
+            EXPECT_EQ_LOGIC({29'b0, dut.sendCounter}, 32'd0, `REPORT(), "binary");
     `END_TEST_TASK(transmitterTb, validate_reset_on_stop_state)
 
     `TEST_TASK(transmitterTb, validate_reset_in_middle_of_send)
@@ -406,23 +517,34 @@ module transmitterTb;
             #1
             EXPECT_EQ_LOGIC({30'b0, dut.stateCounter}, {30'b0, uartUtil::IDLE}, `REPORT(), "binary");
             EXPECT_EQ_LOGIC({30'b0, dut.nextState}, {30'b0, uartUtil::START}, `REPORT(), "binary");
+            EXPECT_EQ_LOGIC({31'b0, vIf.cb.transmitOutput}, 32'b1, `REPORT(), "binary");
+            EXPECT_EQ_LOGIC({31'b0, vIf.cb.done}, 32'b0, `REPORT(), "binary");
+            EXPECT_EQ_LOGIC({29'b0, dut.sendCounter}, 32'd0, `REPORT(), "binary");
         @(vIf.cb);
             EXPECT_EQ_LOGIC({30'b0, dut.stateCounter}, {30'b0, uartUtil::START}, `REPORT(), "binary");
             EXPECT_EQ_LOGIC({30'b0, dut.nextState}, {30'b0, uartUtil::SEND}, `REPORT(), "binary");
             EXPECT_EQ_LOGIC({31'b0, vIf.cb.transmitOutput}, 32'b0, `REPORT(), "binary");
+            EXPECT_EQ_LOGIC({31'b0, vIf.cb.done}, 32'b0, `REPORT(), "binary");
+            EXPECT_EQ_LOGIC({29'b0, dut.sendCounter}, 32'd0, `REPORT(), "binary");
         @(vIf.cb); // send 0 
             EXPECT_EQ_LOGIC({30'b0, dut.stateCounter}, {30'b0, uartUtil::SEND}, `REPORT(), "binary");
             EXPECT_EQ_LOGIC({30'b0, dut.nextState}, {30'b0, uartUtil::SEND}, `REPORT(), "binary");
             EXPECT_EQ_LOGIC({31'b0, vIf.cb.transmitOutput}, {31'b0, byteToTransmit[0]}, `REPORT(), "binary");
+            EXPECT_EQ_LOGIC({31'b0, vIf.cb.done}, 32'b0, `REPORT(), "binary");
+            EXPECT_EQ_LOGIC({29'b0, dut.sendCounter}, 32'd0, `REPORT(), "binary");
         @(vIf.cb); // send 1
             vIf.cb.rst <= 1'b1;
             EXPECT_EQ_LOGIC({30'b0, dut.stateCounter}, {30'b0, uartUtil::SEND}, `REPORT(), "binary");
             EXPECT_EQ_LOGIC({30'b0, dut.nextState}, {30'b0, uartUtil::SEND}, `REPORT(), "binary");
             EXPECT_EQ_LOGIC({31'b0, vIf.cb.transmitOutput}, {31'b0, byteToTransmit[1]}, `REPORT(), "binary");
+            EXPECT_EQ_LOGIC({31'b0, vIf.cb.done}, 32'b0, `REPORT(), "binary");
+            EXPECT_EQ_LOGIC({29'b0, dut.sendCounter}, 32'd1, `REPORT(), "binary");
         @(vIf.cb);
             EXPECT_EQ_LOGIC({30'b0, dut.stateCounter}, {30'b0, uartUtil::IDLE}, `REPORT(), "binary");
             EXPECT_EQ_LOGIC({30'b0, dut.nextState}, {30'b0, uartUtil::START}, `REPORT(), "binary");
             EXPECT_EQ_LOGIC({31'b0, vIf.cb.transmitOutput}, {32'b1}, `REPORT(), "binary");
+            EXPECT_EQ_LOGIC({31'b0, vIf.cb.done}, 32'b0, `REPORT(), "binary");
+            EXPECT_EQ_LOGIC({29'b0, dut.sendCounter}, 32'd0, `REPORT(), "binary");
     `END_TEST_TASK(transmitterTb, validate_reset_in_middle_of_send)
     
     initial
