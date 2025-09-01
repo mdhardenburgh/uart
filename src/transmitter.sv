@@ -11,7 +11,6 @@ module transmitter
 
     uartUtil::states_t stateCounter;
     uartUtil::states_t nextState;
-    logic[7:0] loadedByte;
     logic[2:0] sendCounter;
 
     always_ff @(posedge clk) 
@@ -23,25 +22,6 @@ module transmitter
         else
         begin
             stateCounter <= nextState;
-        end
-    end
-
-    always_ff @(posedge clk)
-    begin: evaluateLoad
-        if(rst)
-        begin
-            loadedByte <= 8'h00;
-        end
-        else
-        begin
-            if(stateCounter == uartUtil::START)
-            begin
-                loadedByte <= byteToLoad; 
-            end
-            else
-            begin
-                loadedByte <= loadedByte;
-            end
         end
     end
 
@@ -120,7 +100,7 @@ module transmitter
             end
             uartUtil::SEND:
             begin
-                transmitOutput = loadedByte[sendCounter];
+                transmitOutput = byteToLoad[sendCounter];
                 done = 1'b0;
             end
             uartUtil::STOP:
