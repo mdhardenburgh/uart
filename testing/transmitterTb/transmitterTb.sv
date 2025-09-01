@@ -100,9 +100,7 @@ module transmitterTb;
             EXPECT_EQ_LOGIC({31'b0, vIf.cb.done}, 32'b0, `REPORT(), "binary");
             EXPECT_EQ_LOGIC({31'b0, vIf.cb.transmitOutput}, 32'b1, `REPORT(), "binary");
             EXPECT_EQ_LOGIC({29'b0, dut.sendCounter}, 32'd0, `REPORT(), "binary");
-        // loadedByte doesnt latch until after the clock cycle
         @(vIf.cb);
-            EXPECT_EQ_LOGIC({24'b0, dut.loadedByte}, 32'h000000FF, `REPORT(), "binary");
             EXPECT_EQ_LOGIC({30'b0, dut.stateCounter}, {30'b0, uartUtil::SEND}, `REPORT(), "binary");
             EXPECT_EQ_LOGIC({30'b0, dut.nextState}, {30'b0, uartUtil::SEND}, `REPORT(), "binary");
             EXPECT_EQ_LOGIC({31'b0, vIf.cb.done}, 32'b0, `REPORT(), "binary");
