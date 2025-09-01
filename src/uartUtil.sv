@@ -8,5 +8,6 @@ package uartUtil;
         SEND,
         STOP
     } states_t;
+    parameter int uartFrameSize = 8;
 endpackage
 `endif
