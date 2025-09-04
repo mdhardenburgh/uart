@@ -13,10 +13,6 @@ cmake_policy(SET CMP0074 NEW)
 include(ProcessorCount)
 ProcessorCount(NCPU)
 
-# Options (use -Dverilate=ON or -Dvivado=ON)
-#option(verilate "Build with Verilator" OFF)
-#option(vivado   "Run Vivado batch flow" OFF)
-
 # Make them mutually exclusive
 if($ENV{VERILATE} AND $ENV{VIVADO})
     message(FATAL_ERROR "Choose exactly one: export VIVADO=1 or export VERILATE=1 (not both).")
