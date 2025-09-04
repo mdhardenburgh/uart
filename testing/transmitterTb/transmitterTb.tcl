@@ -4,13 +4,24 @@
 # vivado -mode batch -source rcatb.tcl
 # use xvlog, xelab and xsim for simulation
 # read_verilog, synth_design for FPGA implemention
+set TOP transmitterTb
+
+puts "PWD is [pwd]"
+set projRoot [pwd]
+
+# Build the include args for xvlog
+set inc_dirs   [list \
+    [file join $projRoot src] \
+    [file join $projRoot testing/transmitterTb] \
+]
+set inc_args {}
+foreach d $inc_dirs { lappend inc_args -i $d }
 
 # Absolute path to this script
 set script_path [info script]
 # Directory containing this script
 set script_dir [file dirname $script_path]
 puts "Script directory: $script_dir"
-cd $script_dir
 set sourceList [file join $script_dir "sourceList.txt"]
 
 set fh [open $sourceList r]
@@ -22,14 +33,15 @@ set srcFiles [split $contents "\n"]
 
 # Drop empties
 set clean {}
-foreach f $srcFiles {
-    if {$f ne ""} { lappend clean $f }
-}
+foreach f $srcFiles {if {$f ne ""} { lappend clean $f }}
+puts "xvlog includes: $inc_dirs"
 
-exec xvlog -sv {*}$srcFiles --define DEBUG=1
-#exec xvlog -sv /home/matthew/uart/src/transmitter.sv /home/matthew/uart/src/reciever.sv /home/matthew/uart/src/uartUtil.sv /home/matthew/uart/build/_deps/svtest-src/testFramework.sv /home/matthew/uart/testing/transmitterTb/transmitterTb.sv --define DEBUG=1
+# last thing, cd to build directory
+cd $script_dir
+
+exec xvlog -sv {*}$srcFiles {*}$inc_args
 # lint files
-exec xelab top --define DEBUG=1
-exec xsim top -runall 
+exec xelab -L work $TOP -s ${TOP}_sim
+exec xsim ${TOP}_sim -runall 
 
 exit

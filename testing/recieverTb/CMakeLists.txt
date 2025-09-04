@@ -15,13 +15,13 @@ if(NOT verilator_FOUND)
         "Verilator was not found. Either install it, or set the VERILATOR_ROOT environment variable"
     )
 endif()
-
+# 18ab4a2015df7f766caf52ae4720080de8ecd3cc
 include(FetchContent)
 FetchContent_Declare(
     svTest
     # Specify the commit you depend on and update it regularly.
     GIT_REPOSITORY https://github.com/mdhardenburgh/svTest.git
-    GIT_TAG        18ab4a2015df7f766caf52ae4720080de8ecd3cc # v1.0.00-pre-release
+    GIT_TAG        ff31d93c3efe0dfa230edf5204dee604f6dbe020 # v1.0.00-pre-release
 )
 FetchContent_MakeAvailable(svTest)
 

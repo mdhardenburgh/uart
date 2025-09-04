@@ -1,7 +1,9 @@
 # vivado flow:
-# cmake -S . -B build -Dvivado=ON
+# export VIVADO=1
+# cmake -S . -B build
 # verilator flow:
-# cmake -S . -B build -Dverilate=ON
+# export VERILATE=1
+# cmake -S . -B build
 # cmake --build build --target transmitterTb
 
 cmake_minimum_required(VERSION 3.23.1)
@@ -12,12 +14,12 @@ include(ProcessorCount)
 ProcessorCount(NCPU)
 
 # Options (use -Dverilate=ON or -Dvivado=ON)
-option(verilate "Build with Verilator" OFF)
-option(vivado   "Run Vivado batch flow" OFF)
+#option(verilate "Build with Verilator" OFF)
+#option(vivado   "Run Vivado batch flow" OFF)
 
 # Make them mutually exclusive
-if(verilate AND vivado)
-    message(FATAL_ERROR "Choose exactly one: -Dverilate=ON or -Dvivado=ON (not both).")
+if($ENV{VERILATE} AND $ENV{VIVADO})
+    message(FATAL_ERROR "Choose exactly one: export VIVADO=1 or export VERILATE=1 (not both).")
 endif()
 
 # Tooling discovery
@@ -39,16 +41,16 @@ else()
     #set(VIVADO_TCL transmitterTb.tcl)
     set(VIVADO_TCL "${CMAKE_CURRENT_BINARY_DIR}/${PROJECT_NAME}.tcl" CACHE FILEPATH "Vivado TCL script")
 endif()
-
+# GIT_TAG        18ab4a2015df7f766caf52ae4720080de8ecd3cc # v1.0.00-pre-release
+#GIT_TAG        be881fdc4252a2d3e372e193f1a4a520c680be79
 include(FetchContent)
 FetchContent_Declare(
     svTest
     # Specify the commit you depend on and update it regularly.
     GIT_REPOSITORY https://github.com/mdhardenburgh/svTest.git
-    GIT_TAG        18ab4a2015df7f766caf52ae4720080de8ecd3cc # v1.0.00-pre-release
+    GIT_TAG        be881fdc4252a2d3e372e193f1a4a520c680be79 # v1.0.00-pre-release
 )
 FetchContent_MakeAvailable(svTest)
-
 # fetch interface library file lists:
 get_target_property(tbTestFiles src INTERFACE_SOURCES)
 get_target_property(svTestFiles svTest INTERFACE_SOURCES)
@@ -58,11 +60,11 @@ get_target_property(INCLD_DIRS  src INTERFACE_INCLUDE_DIRECTORIES)
 separate_arguments(tbTestFiles)
 separate_arguments(svTestFiles)
 set(SOURCE_LIST
-    ${tbTestFiles}
     ${svTestFiles}
+    ${tbTestFiles}
     ${CMAKE_CURRENT_LIST_DIR}/transmitterTb.sv
 )
-if(vivado)
+if($ENV{VIVADO})
     string(REPLACE ";" "\n" SOURCE_LIST "${SOURCE_LIST}")
     set(WORKING_DIR "${CMAKE_CURRENT_BINARY_DIR}")
     set(SOURCE_LIST_FILE "${CMAKE_CURRENT_BINARY_DIR}/sourceList.txt")
@@ -71,12 +73,12 @@ if(vivado)
     file(WRITE ${SOURCE_LIST_FILE} "${SOURCE_LIST}")
     message(NOTICE "Copying ${PROJECT_NAME}.tcl to ${CMAKE_CURRENT_BINARY_DIR}")
     file(COPY "${PROJECT_NAME}.tcl" DESTINATION "${CMAKE_CURRENT_BINARY_DIR}")
-elseif(verilate)
+elseif($ENV{VERILATE})
     message(NOTICE "Source list: ${SOURCE_LIST}")
 endif()
 
 # Create a new executable target that will contain all your sources
-if(verilate)
+if($ENV{VERILATE})
     add_executable(${PROJECT_NAME} transmitterTb.cpp)
     target_compile_features(${PROJECT_NAME} PUBLIC cxx_std_14)
     # -Wno-{warning-code}
@@ -95,7 +97,6 @@ if(verilate)
         INCLUDE_DIRS ${INCLD_DIRS}
     )
 else()
-
     add_custom_target(transmitterTb
     COMMAND "${VIVADO_EXECUTABLE}" -mode batch -source "${VIVADO_TCL}" -journal "${CMAKE_CURRENT_BINARY_DIR}/vivado.jou" -log "${CMAKE_CURRENT_BINARY_DIR}/vivado.log"
     WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}"
