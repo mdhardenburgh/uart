@@ -9,14 +9,6 @@ set TOP transmitterTb
 puts "PWD is [pwd]"
 set projRoot [pwd]
 
-# Build the include args for xvlog
-#set inc_dirs   [list \
-#    [file join $projRoot src] \
-#    [file join $projRoot testing/transmitterTb] \
-#]
-#set inc_args {}
-#foreach d $inc_dirs { lappend inc_args -i $d }
-
 # Absolute path to this script
 set script_path [info script]
 # Directory containing this script
