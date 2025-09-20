@@ -14,15 +14,15 @@ include(ProcessorCount)
 ProcessorCount(NCPU)
 
 if("$ENV{VERILATE}" STREQUAL "" AND "$ENV{VIVADO}" STREQUAL "")
-    message(FATAL_ERROR "VIVADO or VERILATE not defined. Please define enviroment enviroment variable, export VIVADO or export VIVADO")
+    message(FATAL_ERROR "VIVADO or VERILATE not defined. Please define enviroment enviroment variable, $ export VERILATE=1 or $ export VIVADO=1")
 endif()
 # Make them mutually exclusive
 if("$ENV{VERILATE}" STREQUAL "1" AND "$ENV{VIVADO}" STREQUAL "1")
-    message(FATAL_ERROR "Choose exactly one: export VIVADO=1 or export VERILATE=1 (not both).")
+    message(FATAL_ERROR "only one tool per shell instance: export VIVADO=1 or export VERILATE=1 (not both).")
 endif()
 
 # Tooling discovery
-if(verilate)
+if("$ENV{VERILATE}" STREQUAL "1")
     find_package(verilator HINTS $ENV{VERILATOR_ROOT} ${VERILATOR_ROOT})
     if(NOT verilator_FOUND)
         message(FATAL_ERROR "Verilator was not found. Either install it, or set the VERILATOR_ROOT environment variable")
@@ -99,7 +99,7 @@ if($ENV{VERILATE})
         TOP_MODULE ${PROJECT_NAME}
         THREADS ${NCPU}
         VERILATOR_ARGS ${ARGS}
-        INCLUDE_DIRS ${INCLD_DIRS}
+        INCLUDE_DIRS ${INCLUDE_DIRS}
     )
 else()
     add_custom_target(transmitterTb
