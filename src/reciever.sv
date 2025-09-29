@@ -87,47 +87,58 @@ module reciever
         end
     end// 01000000, 
 
-    always_comb 
+    always_comb
     begin: nextStateLogic
-        unique case(stateCounter)
-            uartUtil::IDLE:
-            begin
-                if(recieverInput == 1'b0)
+        if(rst)
+        begin
+            nextState = uartUtil::IDLE;
+        end
+        else
+        begin
+            unique case(stateCounter)
+                uartUtil::IDLE:
                 begin
-                    nextState = uartUtil::START;
+                    if(recieverInput == 1'b0)
+                    begin
+                        nextState = uartUtil::START;
+                    end
+                    else
+                    begin
+                        nextState = uartUtil::IDLE;
+                    end
                 end
-                else
-                begin
-                    nextState = uartUtil::IDLE;
-                end
-            end
-            uartUtil::START:
-            begin
-                nextState = uartUtil::SEND;
-            end
-            uartUtil::SEND:
-            begin
-                if((recieveCounter > 4'd7) && (recieverInput == 1'b1))
-                begin
-                    nextState = uartUtil::STOP;
-                end
-                else
+                uartUtil::START:
                 begin
                     nextState = uartUtil::SEND;
                 end
-            end
-            uartUtil::STOP:
-            begin
-                if(recieverInput == 1'b0)
+                uartUtil::SEND:
                 begin
-                    nextState = uartUtil::START;
+                    if((recieveCounter > 4'd7) && (recieverInput == 1'b1))
+                    begin
+                        nextState = uartUtil::STOP;
+                    end
+                    else
+                    begin
+                        nextState = uartUtil::SEND;
+                    end
                 end
-                else
+                uartUtil::STOP:
+                begin
+                    if(recieverInput == 1'b0)
+                    begin
+                        nextState = uartUtil::START;
+                    end
+                    else
+                    begin
+                        nextState = uartUtil::IDLE;
+                    end
+                end
+                default:
                 begin
                     nextState = uartUtil::IDLE;
                 end
-            end
-        endcase
+            endcase
+        end
     end
 
     always_comb

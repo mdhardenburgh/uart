@@ -76,6 +76,11 @@ module transmitterTb;
             EXPECT_EQ_LOGIC({30'b0, dut.nextState}, {30'b0, uartUtil::IDLE}, `REPORT, "binary");
     `END_TEST_TASK(transmitterTb, vaildate_output_on_reset)
 
+    /*
+     * Changed from vIf.cb.send to vIf.send because I wanted the signal to take
+     * effect immediately, not after the clock. 
+     * Same for all the vIf.cb.* I had before
+    */
     `TEST_TASK(transmitterTb, validate_byte_loaded_on_send)
         logic[7:0] byteToTransmit = 8'h00;
         @(vIf.cb);
