@@ -37,7 +37,7 @@ else()
     else()
         message(NOTICE "Vivado located at ${VIVADO_EXECUTABLE}")
     endif()
-    set(VIVADO_TCL "${CMAKE_CURRENT_BINARY_DIR}/${PROJECT_NAME}.tcl" CACHE FILEPATH "Vivado TCL script")
+    set(VIVADO_TCL "${CMAKE_CURRENT_BINARY_DIR}/${PROJECT_NAME}.tcl")
 endif()
 
 include(FetchContent)
@@ -101,7 +101,10 @@ if($ENV{VERILATE})
     )
 else()
     add_custom_target(${PROJECT_NAME}
-    COMMAND "${VIVADO_EXECUTABLE}" -mode batch -source "${VIVADO_TCL}" -journal "${CMAKE_CURRENT_BINARY_DIR}/vivado.jou" -log "${CMAKE_CURRENT_BINARY_DIR}/vivado.log"
+    COMMAND "${VIVADO_EXECUTABLE}" -mode batch 
+    -source "${VIVADO_TCL}" 
+    -journal "${CMAKE_CURRENT_BINARY_DIR}/vivado.jou" 
+    -log "${CMAKE_CURRENT_BINARY_DIR}/vivado.log"
     WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}"
     COMMENT "Running Vivado (batch) with ${VIVADO_TCL}"
     VERBATIM

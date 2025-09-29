@@ -37,11 +37,9 @@ else()
     else()
         message(NOTICE "Vivado located at ${VIVADO_EXECUTABLE}")
     endif()
-    #set(VIVADO_TCL transmitterTb.tcl)
-    set(VIVADO_TCL "${CMAKE_CURRENT_BINARY_DIR}/${PROJECT_NAME}.tcl" CACHE FILEPATH "Vivado TCL script")
+    set(VIVADO_TCL "${CMAKE_CURRENT_BINARY_DIR}/${PROJECT_NAME}.tcl")
 endif()
-# GIT_TAG        18ab4a2015df7f766caf52ae4720080de8ecd3cc # v1.0.00-pre-release
-#GIT_TAG        be881fdc4252a2d3e372e193f1a4a520c680be79
+
 include(FetchContent)
 FetchContent_Declare(
     svTest
@@ -62,7 +60,7 @@ separate_arguments(svTestFiles)
 set(SOURCE_LIST
     ${svTestFiles}
     ${tbTestFiles}
-    ${CMAKE_CURRENT_LIST_DIR}/transmitterTb.sv
+    ${CMAKE_CURRENT_LIST_DIR}/${PROJECT_NAME}.sv
 )
 if($ENV{VIVADO})
     string(REPLACE ";" "\n" SOURCE_LIST "${SOURCE_LIST}")
@@ -84,7 +82,7 @@ endif()
 
 # Create a new executable target that will contain all your sources
 if($ENV{VERILATE})
-    add_executable(${PROJECT_NAME} transmitterTb.cpp)
+    add_executable(${PROJECT_NAME} ${PROJECT_NAME}.cpp)
     target_compile_features(${PROJECT_NAME} PUBLIC cxx_std_14)
     # -Wno-{warning-code}
     #set(ARGS -Wno-LATCH -Wno-UNOPTFLAT -Wno-INITIALDLY -Wno-MULTIDRIVEN -Wno-WIDTHEXPAND -Wno-WIDTHTRUNC --assert --timing)
@@ -102,7 +100,7 @@ if($ENV{VERILATE})
         INCLUDE_DIRS ${INCLUDE_DIRS}
     )
 else()
-    add_custom_target(transmitterTb
+    add_custom_target(${PROJECT_NAME}
     COMMAND "${VIVADO_EXECUTABLE}" -mode batch -source "${VIVADO_TCL}" -journal "${CMAKE_CURRENT_BINARY_DIR}/vivado.jou" -log "${CMAKE_CURRENT_BINARY_DIR}/vivado.log"
     WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}"
     COMMENT "Running Vivado (batch) with ${VIVADO_TCL}"
