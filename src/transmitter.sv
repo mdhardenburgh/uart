@@ -44,45 +44,56 @@ module transmitter
 
     always_comb 
     begin: nextStateLogic
-        case(stateCounter)
-            uartUtil::IDLE:
-            begin
-                if(send)
+        if(rst)
+        begin
+            nextState = uartUtil::IDLE;
+        end
+        else
+        begin
+            unique case(stateCounter)
+                uartUtil::IDLE:
                 begin
-                    nextState = uartUtil::START;
+                    if(send)
+                    begin
+                        nextState = uartUtil::START;
+                    end
+                    else
+                    begin
+                        nextState = uartUtil::IDLE;
+                    end
                 end
-                else
-                begin
-                    nextState = uartUtil::IDLE;
-                end
-            end
-            uartUtil::START:
-            begin
-                nextState = uartUtil::SEND;
-            end
-            uartUtil::SEND:
-            begin
-                if(sendCounter == 3'd7)
-                begin
-                    nextState = uartUtil::STOP;
-                end
-                else
+                uartUtil::START:
                 begin
                     nextState = uartUtil::SEND;
                 end
-            end
-            uartUtil::STOP:
-            begin
-                if(send)
+                uartUtil::SEND:
                 begin
-                    nextState = uartUtil::START;
+                    if(sendCounter == 3'd7)
+                    begin
+                        nextState = uartUtil::STOP;
+                    end
+                    else
+                    begin
+                        nextState = uartUtil::SEND;
+                    end
                 end
-                else
+                uartUtil::STOP:
+                begin
+                    if(send)
+                    begin
+                        nextState = uartUtil::START;
+                    end
+                    else
+                    begin
+                        nextState = uartUtil::IDLE;
+                    end
+                end
+                default:
                 begin
                     nextState = uartUtil::IDLE;
                 end
-            end
-        endcase
+            endcase
+        end
     end
 
     always_comb
